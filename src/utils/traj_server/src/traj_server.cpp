@@ -224,7 +224,7 @@ public:
         // #1. store the odometry
         _odom = odom;
         _vis_cmd.header = _odom.header;
-        _vis_cmd.header.frame_id = "/world_enu";
+        _vis_cmd.header.frame_id = "world_enu";
 
         if(state == INIT )
         {
@@ -235,7 +235,7 @@ public:
             _cmd.position.z = 1.0;
             
             _cmd.header.stamp = _odom.header.stamp;
-            _cmd.header.frame_id = "/world_enu";
+            _cmd.header.frame_id = "world_enu";
             //_cmd.trajectory_flag = _traj_flag;
             _cmd.trajectory_flag = quadrotor_msgs::PositionCommand::TRAJECTORY_STATUS_READY;
 
@@ -358,7 +358,7 @@ public:
         if (state == INIT) return;
         if (state == HOVER)
         {
-            if (_cmd.header.frame_id != "/world_enu"){
+            if (_cmd.header.frame_id != "world_enu"){
                 _cmd.position = _odom.pose.pose.position;
             }
            
@@ -367,7 +367,7 @@ public:
             //hzc
                 
             _cmd.header.stamp = _odom.header.stamp;
-            _cmd.header.frame_id = "/world_enu";
+            _cmd.header.frame_id = "world_enu";
             _cmd.trajectory_flag = _traj_flag;
             if(emegency_flag){
                 if(ec==0){
@@ -399,7 +399,7 @@ public:
         {
             _cmd.header.stamp = _odom.header.stamp;
 
-            _cmd.header.frame_id = "/world_enu";
+            _cmd.header.frame_id = "world_enu";
             _cmd.trajectory_flag = _traj_flag;
             _cmd.trajectory_id = _traj_id;
 
@@ -495,7 +495,7 @@ public:
         
         _vis_vel.ns = "vel";
         _vis_vel.id = 0;
-        _vis_vel.header.frame_id = "/world_enu";
+        _vis_vel.header.frame_id = "world_enu";
         _vis_vel.type = visualization_msgs::Marker::ARROW;
         _vis_vel.action = visualization_msgs::Marker::ADD;
         _vis_vel.color.a = 1.0;
@@ -547,7 +547,7 @@ public:
 
         _vis_acc.ns = "acc";
         _vis_acc.id = 0;
-        _vis_acc.header.frame_id = "/world_enu";
+        _vis_acc.header.frame_id = "world_enu";
         _vis_acc.type = visualization_msgs::Marker::ARROW;
         _vis_acc.action = visualization_msgs::Marker::ADD;
         _vis_acc.color.a = 1.0;

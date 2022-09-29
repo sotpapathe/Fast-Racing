@@ -56,7 +56,7 @@ int main(int argc, char ** argv)
                 0,0,-1;
     nh.param("host_ip", host_ip,std::string("localhost"));
     nh.param("resolution",resolution,0.1);
-    nh.param("world_frame_id",world_frameid,std::string("/world_enu"));
+    nh.param("world_frame_id",world_frameid,std::string("world_enu"));
     nh.param("use_octree",use_octree,false);
     if(use_octree)
       server_drone = new OctomapServer(private_nh, nh,world_frameid);
@@ -87,7 +87,7 @@ int main(int argc, char ** argv)
               q.x() = cube_pose.orientation.x();
               q.y() = cube_pose.orientation.y();
               q.z() = cube_pose.orientation.z();
-              if(world_frameid==std::string("/world_enu")){
+              if(world_frameid==std::string("world_enu")){
                   position<<cube_pose.position.y(),cube_pose.position.x(),-cube_pose.position.z();
                   body2world = enutoned*q.toRotationMatrix();
               }

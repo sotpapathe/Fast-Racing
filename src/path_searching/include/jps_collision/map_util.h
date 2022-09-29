@@ -61,7 +61,7 @@ namespace JPS {
         nh.param("map/x_size",map_size(0),100.0);
         nh.param("map/y_size",map_size(1),100.0);
         nh.param("use_esdf",use_esdf,false);
-        nh.param("world_frame_id",world_frame_id,std::string("/world_enu"));
+        nh.param("world_frame_id",world_frame_id,std::string("world_enu"));
 
         origin_d_[0] = -map_size(0)/2;
         origin_d_[1] = -10.0;
