@@ -1,0 +1,39 @@
+<launch>
+  <arg name="host"       default="localhost" />
+  <arg name="use_octree" default="true"/>
+
+  <include file="$(find airsim_ros_pkgs)/launch/airsim_node.launch">
+    <arg name="use_octree" value="$(arg use_octree)"/>
+  </include>
+
+  <node pkg="odom_visualization" type="odom_visualization" name="odom_visualization" output="screen">
+        <remap from="~odom" to="/airsim_node/drone_1/odom_local_enu"/>
+        <param name="color/a"          value="1.0"/>
+        <param name="color/b"          value="0.0"/>
+        <param name="color/g"          value="0.0"/>
+        <param name="color/r"          value="1.0"/>
+        <param name="covariance_scale" value="100.0"/>
+        <param name="robot_scale"      value="2.0"/>
+  </node>
+
+  <node pkg="waypoint_generator" type="waypoint_generator" name="waypoint_generator" output="screen">
+      <remap from="~goal" to="/goal"/>
+      <param name="waypoint_type" value="manual-lonely-waypoint"/>
+  </node>
+
+  <!-- se3 planner -->
+  <node pkg="plan_manage" type="se3_node" name="se3_node" output="screen">
+    <remap from="~waypoints"     to="/waypoint_generator/waypoints"/>
+    <remap from="~PointCloud_in" to="/airsim_global_map"/>
+    <remap from="~odom"          to="/airsim_node/drone_1/odom_local_enu"/>
+    <remap from="~trajectory"    to="/trajectory"/>
+    <rosparam file="$(find plan_manage)/misc/ral-eval-occ-map.yaml" command="load"/>
+    <param name="host_ip"          value="$(arg host)" type="string"  />
+    <param name="jps/resolution"   value="0.08"         type="double"/>
+    <param name="map/x_size"       value="70"          type="double"/>
+    <param name="map/y_size"       value="400"         type="double"/>
+    <param name="map/z_size"       value="5"         type="double"/>
+    <param name="use_esdf"         value="false"       type="bool"/>
+    <param name="world_frame_id"   value="world_enu"   type="string"/>
+  </node>
+</launch>

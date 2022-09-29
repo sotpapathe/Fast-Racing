@@ -57,7 +57,7 @@ namespace JPS {
          ROS_ERROR("SEARCH MUST BE 3D!");
        }
         nh.param("jps/resolution", res_, 0.1);
-        nh.param("map/z_size",map_size(2),2.0);
+        nh.param("map/z_size",map_size(2),5.0);
         nh.param("map/x_size",map_size(0),100.0);
         nh.param("map/y_size",map_size(1),100.0);
         nh.param("use_esdf",use_esdf,false);
