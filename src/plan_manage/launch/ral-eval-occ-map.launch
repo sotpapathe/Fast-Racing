@@ -22,7 +22,7 @@
   </node>
 
   <!-- se3 planner -->
-  <node pkg="plan_manage" type="se3_node" name="se3_node" output="screen">
+  <node pkg="plan_manage" type="se3_node" name="se3_node" output="screen" required="true">
     <remap from="~waypoints"     to="/waypoint_generator/waypoints"/>
     <remap from="~PointCloud_in" to="/airsim_global_map"/>
     <remap from="~odom"          to="/airsim_node/drone_1/odom_local_enu"/>
