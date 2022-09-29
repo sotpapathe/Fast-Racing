@@ -141,10 +141,11 @@ int main(int argc, char **argv) {
 	std::unique_ptr<OctomapServer> server_drone;
 	if (use_octree) {
 		server_drone = std::unique_ptr<OctomapServer>(new OctomapServer(private_nh, nh, world_frameid));
+		server_drone->m_octree->clear();
 	}
 
 	ros::Publisher airsim_map_pub =
-		nh.advertise<sensor_msgs::PointCloud2>("/airsim_global_map", 1);
+		nh.advertise<sensor_msgs::PointCloud2>("/airsim_global_map", 1, true);
 	msr::airlib::RpcLibClientBase airsim_client_map_(host_ip);
 	airsim_client_map_.confirmConnection();
 
@@ -158,32 +159,31 @@ int main(int argc, char **argv) {
 	const VoxelGrid grid (filename);
 	ROS_INFO("Loaded binvox map with %zu occupied voxels", grid.voxels.size());
 
-	ros::Rate rate(1);
-	while (ros::ok()) {
-		ros::spinOnce();
-		if (use_octree) {
-			server_drone->m_octree->clear();
-		}
-
+	// Publish the map as a pointcloud message and update the OctoMap.
+	{
+		sensor_msgs::PointCloud2 globalMap_pcd;
 		pcl::PointCloud<pcl::PointXYZ> cloudMap;
 		for (const auto& point : grid.voxels) {
-			const Eigen::Vector3d p = point.cast<double>();
-			cloudMap.points.emplace_back(p.x(), p.y(), p.z());
+			cloudMap.points.emplace_back(point.x(), point.y(), point.z());
 			if (use_octree) {
 				server_drone->m_octree->updateNode(
-					p.x() + 1e-5, p.y() + 1e-5, p.z() + 1e-5, true);
+					point.x() + 1e-5, point.y() + 1e-5, point.z() + 1e-5, true);
 			}
-		}
-		if (use_octree) {
-			server_drone->publishAll();
 		}
 		cloudMap.width = cloudMap.points.size();
 		cloudMap.height = 1;
 		cloudMap.is_dense = true;
-		sensor_msgs::PointCloud2 globalMap_pcd;
 		pcl::toROSMsg(cloudMap, globalMap_pcd);
 		globalMap_pcd.header.frame_id = world_frameid;
 		airsim_map_pub.publish(globalMap_pcd);
+	}
+
+	ros::Rate rate(1);
+	while (ros::ok()) {
+		ros::spinOnce();
+		if (use_octree) {
+			server_drone->publishAll();
+		}
 		rate.sleep();
 	}
 	return 0;
