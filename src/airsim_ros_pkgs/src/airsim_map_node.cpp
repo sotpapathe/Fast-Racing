@@ -183,7 +183,6 @@ int main(int argc, char **argv) {
 		pcl::toROSMsg(cloudMap, globalMap_pcd);
 		globalMap_pcd.header.frame_id = world_frameid;
 		airsim_map_pub.publish(globalMap_pcd);
-		ROS_INFO("Published global map");
 		rate.sleep();
 	}
 	return 0;
