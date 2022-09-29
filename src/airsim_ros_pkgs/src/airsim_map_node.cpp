@@ -33,8 +33,6 @@
 
 #include "airsim_ros_wrapper.h"
 
-#define BINVOX_FILE "/tmp/airsim_map.binvox"
-
 // Define this to work around the AirSim bug that saves binvox files with the
 // inverse scale.
 #define AIRSIM_SCALE
@@ -153,10 +151,11 @@ int main(int argc, char **argv) {
 	// Save and the load the voxel map.
 	msr::airlib::Vector3r origin (0, 0, 0);
 	constexpr double grid_dim = 20.0;
-	if (!airsim_client_map_.simCreateVoxelGrid(origin, grid_dim, grid_dim, grid_dim, resolution, BINVOX_FILE)) {
-		ROS_FATAL("Error writing binvox file %s", BINVOX_FILE);
+	const std::string filename = "/tmp/airsim_map.binvox";
+	if (!airsim_client_map_.simCreateVoxelGrid(origin, grid_dim, grid_dim, grid_dim, resolution, filename)) {
+		ROS_FATAL("Error writing binvox file %s", filename.c_str());
 	}
-	const VoxelGrid grid (BINVOX_FILE);
+	const VoxelGrid grid (filename);
 	ROS_INFO("Loaded binvox map with %zu occupied voxels", grid.voxels.size());
 
 	ros::Rate rate(1);
