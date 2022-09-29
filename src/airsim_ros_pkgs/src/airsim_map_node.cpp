@@ -149,7 +149,18 @@ int main(int argc, char **argv) {
 	msr::airlib::RpcLibClientBase airsim_client_map_(host_ip);
 	airsim_client_map_.confirmConnection();
 
-	// Save and the load the voxel map.
+	// Get the MAV's AABB. Reduce its size in the z direction because it's
+	// too large and increase it by the resolution in the others to avoid
+	// off-by-one issues due to truncation.
+	const std::string mav_name = "drone_1";
+	const Eigen::Vector3f mav_box = airsim_client_map_.simGetObjectScale(mav_name)
+		+ Eigen::Vector3f(resolution, resolution, -0.7f);
+	Eigen::Vector3f mav_position = airsim_client_map_.simGetObjectPose(mav_name).position;
+	if (world_frameid == "world_enu") {
+		mav_position.z() *= -1.0f;
+	}
+
+	// Save and then load the voxel map.
 	msr::airlib::Vector3r origin (0, 0, 0);
 	constexpr double grid_dim = 20.0;
 	const std::string filename = "/tmp/airsim_map.binvox";
@@ -164,10 +175,14 @@ int main(int argc, char **argv) {
 		sensor_msgs::PointCloud2 globalMap_pcd;
 		pcl::PointCloud<pcl::PointXYZ> cloudMap;
 		for (const auto& point : grid.voxels) {
-			cloudMap.points.emplace_back(point.x(), point.y(), point.z());
-			if (use_octree) {
-				server_drone->m_octree->updateNode(
-					point.x() + 1e-5, point.y() + 1e-5, point.z() + 1e-5, true);
+			// Only consider voxels outside the MAV's AABB.
+			const bool in_mav = ((mav_position - point).array().abs() <= mav_box.array() / 2.0f).all();
+			if (!in_mav) {
+				cloudMap.points.emplace_back(point.x(), point.y(), point.z());
+				if (use_octree) {
+					server_drone->m_octree->updateNode(
+						point.x() + 1e-5, point.y() + 1e-5, point.z() + 1e-5, true);
+				}
 			}
 		}
 		cloudMap.width = cloudMap.points.size();
