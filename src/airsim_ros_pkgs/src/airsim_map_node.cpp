@@ -145,7 +145,7 @@ int main(int argc, char **argv) {
 
 	std::unique_ptr<OctomapServer> server_drone;
 	if (use_octree) {
-		server_drone = std::make_unique<OctomapServer>(private_nh, nh, world_frameid);
+		server_drone = std::unique_ptr<OctomapServer>(new OctomapServer(private_nh, nh, world_frameid));
 	}
 
 	ros::Publisher airsim_map_pub =
