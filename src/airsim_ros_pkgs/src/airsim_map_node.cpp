@@ -32,9 +32,98 @@
 
 #include "airsim_ros_wrapper.h"
 
+#define BINVOX_FILE "/tmp/airsim_map.binvox"
+
+// Define this to work around the AirSim bug that saves binvox files with the
+// inverse scale.
+#define AIRSIM_SCALE
+
+
 using namespace octomap;
 using namespace octomap_msgs;
 using namespace octomap_server;
+
+struct VoxelGrid {
+	uint16_t dim_x = 0;
+	uint16_t dim_y = 0;
+	uint16_t dim_z = 0;
+	float t_x = 0.0f;
+	float t_y = 0.0f;
+	float t_z = 0.0f;
+	float scale = 1.0f;
+	std::vector<Eigen::Vector3f, Eigen::aligned_allocator<Eigen::Vector3f>> voxels;
+
+	Eigen::Vector3i indexToVoxelCoords(size_t idx) const
+	{
+		const size_t step_x = dim_z * dim_y;
+		Eigen::Vector3i v;
+		v.x() = idx / step_x;
+		size_t rem = idx % step_x;
+		v.z() = rem / dim_y;
+		v.y() = rem % dim_y;
+		return v;
+	}
+
+	Eigen::Vector3f voxelCoordsToCoords(const Eigen::Vector3i& v) const
+	{
+		const Eigen::Array3f nv =
+			(v.array().cast<float>() + Eigen::Array3f::Constant(0.5f))
+			/ Eigen::Array3f(dim_x, dim_y, dim_z);
+		return (scale * nv + Eigen::Array3f(t_x, t_y, t_z)).matrix();
+	}
+
+	Eigen::Vector3f indexToCoords(size_t idx) const
+	{
+		return voxelCoordsToCoords(indexToVoxelCoords(idx));
+	}
+
+	VoxelGrid(const std::string& filename)
+	{
+		std::ifstream f(filename, std::ios::binary);
+		// Read the header.
+		std::string token;
+		f >> token;
+		if (token != "#binvox") {
+			throw std::runtime_error("Expected the first line to be: #binvox 1");
+		}
+		int version;
+		f >> version;
+		if (version != 1) {
+			throw std::runtime_error("Expected binvox version 1 but got "
+				+ std::to_string(version));
+		}
+		for (f >> token; token != "data"; f >> token) {
+			if (token == "dim") {
+				f >> dim_x >> dim_y >> dim_z;
+			} else if (token == "translate") {
+				f >> t_x >> t_y >> t_z;
+			} else if (token == "scale") {
+				f >> scale;
+#ifdef AIRSIM_SCALE
+				scale = 1.0f / scale;
+#endif
+			}
+		}
+		// Discard the newline of the data line.
+		uint8_t discard;
+		f.read(reinterpret_cast<char*>(&discard), 1);
+		// Read the run-length-encoded voxel data.
+		for (size_t i = 0; i < dim_x * dim_y * dim_z; ) {
+			uint8_t value = 0, count = 0;
+			f.read(reinterpret_cast<char*>(&value), 1);
+			f.read(reinterpret_cast<char*>(&count), 1);
+			// Only store occupied voxel coordinates.
+			if (value) {
+				for (size_t v = i; v < i + count; v++) {
+					voxels.push_back(indexToCoords(v));
+				}
+			}
+			i += count;
+		}
+	}
+};
+
+
 
 int main(int argc, char **argv) {
 	ros::init(argc, argv, "map_node");
@@ -49,75 +138,64 @@ int main(int argc, char **argv) {
 	std::string world_frameid;
 	bool use_octree;
 	nh.param("host_ip", host_ip, std::string("localhost"));
-	nh.param("resolution", resolution, 0.1);
+	nh.param("resolution", resolution, 0.08);
 	nh.param("world_frame_id", world_frameid, std::string("world_enu"));
 	nh.param("use_octree", use_octree, false);
 
-	OctomapServer *server_drone;
+	std::unique_ptr<OctomapServer> server_drone;
 	if (use_octree) {
-		server_drone = new OctomapServer(private_nh, nh, world_frameid);
+		server_drone = std::make_unique<OctomapServer>(private_nh, nh, world_frameid);
 	}
 
 	ros::Publisher airsim_map_pub =
 		nh.advertise<sensor_msgs::PointCloud2>("/airsim_global_map", 1);
 	msr::airlib::RpcLibClientBase airsim_client_map_(host_ip);
 	airsim_client_map_.confirmConnection();
+
+	// Save and the load the voxel map.
+	msr::airlib::Vector3r origin (0, 0, 0);
+	constexpr double grid_dim = 20.0;
+	airsim_client_map_.simCreateVoxelGrid(origin, grid_dim, grid_dim, grid_dim, resolution, BINVOX_FILE);
+	const VoxelGrid grid (BINVOX_FILE);
+	const std::string map_name = airsim_client_map_.simListSceneObjects("ral-eval-occ-map-.*").front();
+	msr::airlib::Pose map_pose = airsim_client_map_.simGetObjectPose(map_name);
+	const Eigen::Quaterniond q(map_pose.orientation.w(),
+			map_pose.orientation.x(), map_pose.orientation.y(),
+			map_pose.orientation.z());
+	Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
+	T.topLeftCorner<3, 3>() = q.toRotationMatrix();
+	if (world_frameid == "world_enu") {
+		T.topRightCorner<3, 1>() =
+			Eigen::Vector3d(map_pose.position.y(),
+					map_pose.position.x(),
+					-map_pose.position.z());
+	} else if (world_frameid == "world_ned") {
+		T.topRightCorner<3, 1>() =
+			Eigen::Vector3d(map_pose.position.x(),
+					map_pose.position.y(),
+					map_pose.position.z());
+	} else {
+		ROS_FATAL("wrong world frame id: %s", world_frameid.c_str());
+	}
+	ROS_INFO("Loaded binvox map with %zu occupied voxels and pose", grid.voxels.size());
+	ROS_INFO_STREAM(T);
+
 	ros::Rate rate(1);
-	int count = 0;
+	size_t count = 0;
 	while (ros::ok()) {
 		ros::spinOnce();
 		if (count <= 10) {
-			pcl::PointCloud<pcl::PointXYZ> cloudMap;
 			if (use_octree) {
 				server_drone->m_octree->clear();
 			}
-			std::vector<std::string> objects_list = airsim_client_map_.simListSceneObjects("Cube.*");
-			for (const auto& object_name : objects_list) {
-				msr::airlib::Pose cube_pose = airsim_client_map_.simGetObjectPose(object_name);
-				msr::airlib::Vector3r cube_scale = airsim_client_map_.simGetObjectScale(object_name);
-				Eigen::Vector3d position;
-				Eigen::Quaterniond q;
-				Eigen::Matrix3d body2world;
-				q.w() = cube_pose.orientation.w();
-				q.x() = cube_pose.orientation.x();
-				q.y() = cube_pose.orientation.y();
-				q.z() = cube_pose.orientation.z();
-				if (world_frameid == std::string("world_enu")) {
-					position << cube_pose.position.y(), cube_pose.position.x(),
-						 -cube_pose.position.z();
-					body2world = enutoned * q.toRotationMatrix();
-				} else if (world_frameid == std::string("/world_ned")) {
-					position << cube_pose.position.x(), cube_pose.position.y(),
-						 cube_pose.position.z();
-					body2world = q.toRotationMatrix();
-				} else {
-					ROS_ERROR("wrong map frame id!");
-				}
-				if (count == 0) {
-					ROS_INFO("We are sending global map~ Please wait~");
-				}
-				for (double lx = -cube_scale.x() / 2; lx < cube_scale.x() / 2 + resolution; lx += resolution) {
-					for (double ly = -cube_scale.y() / 2; ly < cube_scale.y() / 2 + resolution; ly += resolution) {
-						for (double lz = -cube_scale.z() / 2; lz < cube_scale.z() / 2 + resolution; lz += resolution) {
-							Eigen::Vector3d obs_body;
-							obs_body << lx, ly, lz;
-							Eigen::Vector3d obs_world;
-							obs_world = body2world * obs_body + position;
-							pcl::PointXYZ pt;
-							pt.x = obs_world[0];
-							pt.y = obs_world[1];
-							pt.z = obs_world[2];
-							cloudMap.points.push_back(pt);
-							geometry_msgs::Point32 cpt;
-							cpt.x = pt.x;
-							cpt.y = pt.y;
-							cpt.z = pt.z;
-							if (use_octree) {
-								server_drone->m_octree->updateNode(
-										point3d(pt.x + 1e-5, pt.y + 1e-5, pt.z + 1e-5), true);
-							}
-						}
-					}
+
+			pcl::PointCloud<pcl::PointXYZ> cloudMap;
+			for (const auto& point : grid.voxels) {
+				const Eigen::Vector3d p = (T * point.cast<double>().homogeneous()).head<3>();
+				cloudMap.points.emplace_back(p.x(), p.y(), p.z());
+				if (use_octree) {
+					server_drone->m_octree->updateNode(
+						p.x() + 1e-5, p.y() + 1e-5, p.z() + 1e-5, true);
 				}
 			}
 			if (use_octree) {
@@ -131,7 +209,7 @@ int main(int argc, char **argv) {
 			pcl::toROSMsg(cloudMap, globalMap_pcd);
 			globalMap_pcd.header.frame_id = world_frameid;
 			airsim_map_pub.publish(globalMap_pcd);
-			ROS_INFO("send global map");
+			ROS_INFO("Published global map");
 		}
 		rate.sleep();
 	}
