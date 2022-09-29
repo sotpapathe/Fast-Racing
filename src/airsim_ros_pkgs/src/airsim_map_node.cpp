@@ -1,35 +1,13 @@
 #include <Eigen/Eigen>
-#include <geometry_msgs/Point32.h>
-#include <geometry_msgs/PoseStamped.h>
-#include <geometry_msgs/Vector3.h>
 #include <iostream>
-#include <math.h>
+#include <cmath>
 #include <memory>
-#include <nav_msgs/Odometry.h>
-#include <nav_msgs/Path.h>
-#include <octomap/OcTreeKey.h>
-#include <octomap/octomap.h>
-#include <octomap_msgs/BoundingBoxQuery.h>
-#include <octomap_msgs/GetOctomap.h>
-#include <octomap_msgs/Octomap.h>
-#include <octomap_msgs/conversions.h>
-#include <octomap_ros/conversions.h>
 #include <octomap_server/OctomapServer.h>
-#include <pcl/io/pcd_io.h>
-#include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
-#include <pcl/search/impl/kdtree.hpp>
-#include <pcl/search/kdtree.h>
 #include <pcl_conversions/pcl_conversions.h>
-#include <random>
-#include <ros/console.h>
 #include <ros/ros.h>
-#include <ros/spinner.h>
-#include <sensor_msgs/PointCloud.h>
 #include <sensor_msgs/PointCloud2.h>
-#include <visualization_msgs/Marker.h>
-#include <visualization_msgs/MarkerArray.h>
 
 #include "airsim_ros_wrapper.h"
 
@@ -37,10 +15,6 @@
 // inverse scale.
 #define AIRSIM_SCALE
 
-
-using namespace octomap;
-using namespace octomap_msgs;
-using namespace octomap_server;
 
 struct VoxelGrid {
 	uint16_t dim_x = 0;
@@ -138,9 +112,9 @@ int main(int argc, char **argv) {
 	nh.param("world_frame_id", world_frameid, std::string("world_enu"));
 	nh.param("use_octree", use_octree, false);
 
-	std::unique_ptr<OctomapServer> server_drone;
+	std::unique_ptr<octomap_server::OctomapServer> server_drone;
 	if (use_octree) {
-		server_drone = std::unique_ptr<OctomapServer>(new OctomapServer(private_nh, nh, world_frameid));
+		server_drone = std::unique_ptr<octomap_server::OctomapServer>(new octomap_server::OctomapServer(private_nh, nh, world_frameid));
 		server_drone->m_octree->clear();
 	}
 
