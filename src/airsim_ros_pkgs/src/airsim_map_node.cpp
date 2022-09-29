@@ -158,36 +158,32 @@ int main(int argc, char **argv) {
 	ROS_INFO("Loaded binvox map with %zu occupied voxels and pose", grid.voxels.size());
 
 	ros::Rate rate(1);
-	size_t count = 0;
 	while (ros::ok()) {
 		ros::spinOnce();
-		if (count <= 10) {
-			if (use_octree) {
-				server_drone->m_octree->clear();
-			}
-
-			pcl::PointCloud<pcl::PointXYZ> cloudMap;
-			for (const auto& point : grid.voxels) {
-				const Eigen::Vector3d p = point.cast<double>();
-				cloudMap.points.emplace_back(p.x(), p.y(), p.z());
-				if (use_octree) {
-					server_drone->m_octree->updateNode(
-						p.x() + 1e-5, p.y() + 1e-5, p.z() + 1e-5, true);
-				}
-			}
-			if (use_octree) {
-				server_drone->publishAll();
-			}
-			count++;
-			cloudMap.width = cloudMap.points.size();
-			cloudMap.height = 1;
-			cloudMap.is_dense = true;
-			sensor_msgs::PointCloud2 globalMap_pcd;
-			pcl::toROSMsg(cloudMap, globalMap_pcd);
-			globalMap_pcd.header.frame_id = world_frameid;
-			airsim_map_pub.publish(globalMap_pcd);
-			ROS_INFO("Published global map");
+		if (use_octree) {
+			server_drone->m_octree->clear();
 		}
+
+		pcl::PointCloud<pcl::PointXYZ> cloudMap;
+		for (const auto& point : grid.voxels) {
+			const Eigen::Vector3d p = point.cast<double>();
+			cloudMap.points.emplace_back(p.x(), p.y(), p.z());
+			if (use_octree) {
+				server_drone->m_octree->updateNode(
+					p.x() + 1e-5, p.y() + 1e-5, p.z() + 1e-5, true);
+			}
+		}
+		if (use_octree) {
+			server_drone->publishAll();
+		}
+		cloudMap.width = cloudMap.points.size();
+		cloudMap.height = 1;
+		cloudMap.is_dense = true;
+		sensor_msgs::PointCloud2 globalMap_pcd;
+		pcl::toROSMsg(cloudMap, globalMap_pcd);
+		globalMap_pcd.header.frame_id = world_frameid;
+		airsim_map_pub.publish(globalMap_pcd);
+		ROS_INFO("Published global map");
 		rate.sleep();
 	}
 	return 0;
