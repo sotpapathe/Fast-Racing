@@ -6,12 +6,6 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /Grid1
-        - /attitude_ellipsoid1
-        - /quadrotor1
-        - /PointCloud21
-        - /Octree1
-        - /ESDF1
       Splitter Ratio: 0.5488565564155579
     Tree Height: 864
   - Class: rviz/Selection
