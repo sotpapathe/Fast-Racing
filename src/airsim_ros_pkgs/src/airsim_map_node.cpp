@@ -4,6 +4,7 @@
 #include <geometry_msgs/Vector3.h>
 #include <iostream>
 #include <math.h>
+#include <memory>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
 #include <octomap/OcTreeKey.h>
