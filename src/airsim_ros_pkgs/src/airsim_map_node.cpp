@@ -131,9 +131,6 @@ int main(int argc, char **argv) {
 	ros::NodeHandle nh("~");
 	ros::NodeHandle private_nh("~");
 
-	Eigen::Matrix3d enutoned;
-	enutoned << 0, 1, 0, 1, 0, 0, 0, 0, -1;
-
 	std::string host_ip;
 	double resolution;
 	std::string world_frameid;
@@ -158,28 +155,7 @@ int main(int argc, char **argv) {
 	constexpr double grid_dim = 20.0;
 	airsim_client_map_.simCreateVoxelGrid(origin, grid_dim, grid_dim, grid_dim, resolution, BINVOX_FILE);
 	const VoxelGrid grid (BINVOX_FILE);
-	const std::string map_name = airsim_client_map_.simListSceneObjects("ral-eval-occ-map-.*").front();
-	msr::airlib::Pose map_pose = airsim_client_map_.simGetObjectPose(map_name);
-	const Eigen::Quaterniond q(map_pose.orientation.w(),
-			map_pose.orientation.x(), map_pose.orientation.y(),
-			map_pose.orientation.z());
-	Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
-	T.topLeftCorner<3, 3>() = q.toRotationMatrix();
-	if (world_frameid == "world_enu") {
-		T.topRightCorner<3, 1>() =
-			Eigen::Vector3d(map_pose.position.y(),
-					map_pose.position.x(),
-					-map_pose.position.z());
-	} else if (world_frameid == "world_ned") {
-		T.topRightCorner<3, 1>() =
-			Eigen::Vector3d(map_pose.position.x(),
-					map_pose.position.y(),
-					map_pose.position.z());
-	} else {
-		ROS_FATAL("wrong world frame id: %s", world_frameid.c_str());
-	}
 	ROS_INFO("Loaded binvox map with %zu occupied voxels and pose", grid.voxels.size());
-	ROS_INFO_STREAM(T);
 
 	ros::Rate rate(1);
 	size_t count = 0;
@@ -192,7 +168,7 @@ int main(int argc, char **argv) {
 
 			pcl::PointCloud<pcl::PointXYZ> cloudMap;
 			for (const auto& point : grid.voxels) {
-				const Eigen::Vector3d p = (T * point.cast<double>().homogeneous()).head<3>();
+				const Eigen::Vector3d p = point.cast<double>();
 				cloudMap.points.emplace_back(p.x(), p.y(), p.z());
 				if (use_octree) {
 					server_drone->m_octree->updateNode(
