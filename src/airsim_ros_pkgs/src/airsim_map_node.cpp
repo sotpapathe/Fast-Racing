@@ -155,7 +155,7 @@ int main(int argc, char **argv) {
 	constexpr double grid_dim = 20.0;
 	airsim_client_map_.simCreateVoxelGrid(origin, grid_dim, grid_dim, grid_dim, resolution, BINVOX_FILE);
 	const VoxelGrid grid (BINVOX_FILE);
-	ROS_INFO("Loaded binvox map with %zu occupied voxels and pose", grid.voxels.size());
+	ROS_INFO("Loaded binvox map with %zu occupied voxels", grid.voxels.size());
 
 	ros::Rate rate(1);
 	while (ros::ok()) {
