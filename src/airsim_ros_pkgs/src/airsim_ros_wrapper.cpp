@@ -34,7 +34,6 @@ const std::unordered_map<int, std::string> AirsimROSWrapper::image_type_int_to_s
 AirsimROSWrapper::AirsimROSWrapper(const ros::NodeHandle& nh, const ros::NodeHandle& nh_private, const std::string& host_ip) : 
     nh_(nh), 
     nh_private_(nh_private),
-    img_async_spinner_(1, &img_timer_cb_queue_), // a thread for image callbacks to be 'spun' by img_async_spinner_ 
     lidar_async_spinner_(1, &lidar_timer_cb_queue_), // same as above, but for lidar
     host_ip_(host_ip),
     airsim_client_images_(host_ip),
@@ -43,7 +42,6 @@ AirsimROSWrapper::AirsimROSWrapper(const ros::NodeHandle& nh, const ros::NodeHan
 {
     ros_clock_.clock.fromSec(0);
     is_used_lidar_timer_cb_queue_ = false;
-    is_used_img_timer_cb_queue_ = false;
 
     if (AirSimSettings::singleton().simmode_name != "Car")
     {
@@ -341,18 +339,6 @@ void AirsimROSWrapper::create_ros_pubs_from_settings_json()
     if (publish_clock_)
     {
         clock_pub_ = nh_private_.advertise<rosgraph_msgs::Clock>("clock", 1);
-    }
-
-    // if >0 cameras, add one more thread for img_request_timer_cb
-    if(!airsim_img_request_vehicle_name_pair_vec_.empty())
-    {
-        double update_airsim_img_response_every_n_sec;
-        nh_private_.getParam("update_airsim_img_response_every_n_sec", update_airsim_img_response_every_n_sec);
-        //hzchzc
-        ros::TimerOptions timer_options(ros::Duration(update_airsim_img_response_every_n_sec), boost::bind(&AirsimROSWrapper::img_response_timer_cb, this, _1), &img_timer_cb_queue_);
-        airsim_img_response_timer_ = nh_private_.createTimer(timer_options);
-        //hzc
-        is_used_img_timer_cb_queue_ = true;        
     }
 
     // lidars update on their own callback/thread at a given rate
@@ -782,7 +768,6 @@ nav_msgs::Odometry AirsimROSWrapper::get_odom_msg_from_multirotor_state(const ms
         //hzchzc
         std::swap(odom_msg.pose.pose.orientation.x, odom_msg.pose.pose.orientation.y);        
         odom_msg.pose.pose.orientation.z = -odom_msg.pose.pose.orientation.z;
-        double roll,pitch,yaw;
         Eigen::Quaterniond attitude_quater;
         attitude_quater.w() = odom_msg.pose.pose.orientation.w;
         attitude_quater.x() = odom_msg.pose.pose.orientation.x;
@@ -803,6 +788,7 @@ nav_msgs::Odometry AirsimROSWrapper::get_odom_msg_from_multirotor_state(const ms
         odom_msg.pose.pose.orientation.z = enuq.z();
 
 
+        // double roll,pitch,yaw;
         // roll = atan2(2 * (attitude_quater.w() * attitude_quater.x() + attitude_quater.y() * attitude_quater.z()), 1 - 2 * (attitude_quater.x() * attitude_quater.x() + attitude_quater.y() * attitude_quater.y()));
         // pitch = asin(2 * (attitude_quater.w() * attitude_quater.y() - attitude_quater.z() * attitude_quater.x()));
         // yaw = atan2(2 * (attitude_quater.w() * attitude_quater.z() + attitude_quater.x() * attitude_quater.y()), 1 - 2 * (attitude_quater.y() * attitude_quater.y() + attitude_quater.z() * attitude_quater.z()));
@@ -856,7 +842,6 @@ nav_msgs::Odometry AirsimROSWrapper::get_odom_msg_from_truth_state(const msr::ai
         // std::swap(odom_msg.pose.pose.orientation.x, odom_msg.pose.pose.orientation.y);        
         // odom_msg.pose.pose.orientation.z = -odom_msg.pose.pose.orientation.z;
         //hzchzc
-        double roll,pitch,yaw;
         Eigen::Quaterniond attitude_quater;
         attitude_quater.w() = odom_msg.pose.pose.orientation.w;
         attitude_quater.x() = odom_msg.pose.pose.orientation.x;
@@ -885,6 +870,7 @@ nav_msgs::Odometry AirsimROSWrapper::get_odom_msg_from_truth_state(const msr::ai
 
 
 
+        // double roll,pitch,yaw;
         // roll = atan2(2 * (attitude_quater.w() * attitude_quater.x() + attitude_quater.y() * attitude_quater.z()), 1 - 2 * (attitude_quater.x() * attitude_quater.x() + attitude_quater.y() * attitude_quater.y()));
         // pitch = asin(2 * (attitude_quater.w() * attitude_quater.y() - attitude_quater.z() * attitude_quater.x()));
         // yaw = atan2(2 * (attitude_quater.w() * attitude_quater.z() + attitude_quater.x() * attitude_quater.y()), 1 - 2 * (attitude_quater.y() * attitude_quater.y() + attitude_quater.z() * attitude_quater.z()));
@@ -1542,41 +1528,6 @@ void AirsimROSWrapper::append_static_camera_tf(VehicleROS* vehicle_ros, const st
 
     vehicle_ros->static_tf_msg_vec.emplace_back(static_cam_tf_body_msg);
     vehicle_ros->static_tf_msg_vec.emplace_back(static_cam_tf_optical_msg);
-}
-
-void AirsimROSWrapper::img_response_timer_cb(const ros::TimerEvent& event)
-{    
-    try
-    {
-        int image_response_idx = 0;
-        for (const auto& airsim_img_request_vehicle_name_pair : airsim_img_request_vehicle_name_pair_vec_)
-        {
-            const std::vector<ImageResponse>& img_response = airsim_client_images_.simGetImages(airsim_img_request_vehicle_name_pair.first, airsim_img_request_vehicle_name_pair.second);
-
-            if (img_response.size() == airsim_img_request_vehicle_name_pair.first.size()) 
-            {
-                process_and_publish_img_response(img_response, image_response_idx, airsim_img_request_vehicle_name_pair.second);
-                image_response_idx += img_response.size();
-            }            
-        }
-    }
-
-    catch (rpc::rpc_error& e)
-    {
-        std::string msg = e.get_error().as<std::string>();
-        std::cout << "Exception raised by the API, didn't get image response." << std::endl << msg << std::endl;
-    }
-
-    //hzchzc
-    // vector<string>  objects  =    airsim_client_ ->simListSceneObjects();
-    // std::cout<<"--------------------------------------------------------- \n";
-    // for(int i =0;i<objects.size();i++){
-    //     std::cout<<objects[i]<<"    ";
-    // }   
-    // std::cout<<"\n";
-    // std_msgs::Float32 a;
-    // a.data = 0.1;
-    // debug_pub_.publish(a);
 }
 
 void AirsimROSWrapper::lidar_timer_cb(const ros::TimerEvent& event)

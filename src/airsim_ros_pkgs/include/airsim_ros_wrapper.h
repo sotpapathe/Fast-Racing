@@ -140,10 +140,8 @@ public:
     void initialize_ros();
 
     // std::vector<ros::CallbackQueue> callback_queues_;
-    ros::AsyncSpinner img_async_spinner_;
     ros::AsyncSpinner lidar_async_spinner_;
     bool is_used_lidar_timer_cb_queue_;
-    bool is_used_img_timer_cb_queue_;
     msr::airlib::MultirotorRpcLibClient drone1_client;
 
 private:
@@ -219,7 +217,6 @@ private:
     };
 
     /// ROS timer callbacks
-    void img_response_timer_cb(const ros::TimerEvent& event); // update images from airsim_client_ every nth sec
     void drone_state_timer_cb(const ros::TimerEvent& event); // update drone state from airsim_client_ every nth sec
     // void drone_state_timer_cb(const ros::SteadyTimerEvent& event); // update drone state from airsim_client_ every nth sec
     void lidar_timer_cb(const ros::TimerEvent& event);
@@ -346,7 +343,6 @@ private:
 
     // todo not sure if async spinners shuold be inside this class, or should be instantiated in airsim_node.cpp, and cb queues should be public
     // todo for multiple drones with multiple sensors, this won't scale. make it a part of VehicleROS?
-    ros::CallbackQueue img_timer_cb_queue_;
     ros::CallbackQueue lidar_timer_cb_queue_;
 
     std::mutex drone_control_mutex_;
@@ -373,7 +369,6 @@ private:
     double control_duration_;
 
     /// ROS Timers.
-    ros::Timer airsim_img_response_timer_;
     ros::Timer airsim_control_update_timer_;
     ros::SteadyTimer airsim_control_update_timer_1;
     ros::Timer airsim_lidar_update_timer_;
