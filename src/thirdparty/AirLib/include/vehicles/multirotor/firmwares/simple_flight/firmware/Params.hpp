@@ -51,9 +51,9 @@ public:
     struct AngleRatePid {
         //max_xxx_rate > 5 would introduce wobble/oscillations
         const float kMaxLimit = 2.5f;
-        const float kP = 0.25f;
-        const float kI = 0.0f;
-        const float kD = 0.0f;
+        const float kP = 1.0f;//0.25
+        const float kI = 0.0f;//0
+        const float kD = 0.0f;//0
 
         Axis3r max_limit = Axis3r(kMaxLimit, kMaxLimit, kMaxLimit); //roll, pitch, yaw - in radians/sec
 
@@ -66,9 +66,10 @@ public:
 
     struct AngleLevelPid {
         const float pi = 3.14159265359f; //180-degrees
-        const float kP = 2.5f;
-        const float kI = 0.0f;
-        const float kD = 0.0f;
+        const float kP = 10.0f;//2.5
+        const float kI = 0.0f;//0
+        const float kD = 0.0f;//0
+        fasfafaf
         
         //max_pitch/roll_angle > 5.5 would produce verticle thrust that is not enough to keep vehicle in air at extremities of controls
         Axis4r max_limit = Axis4r(pi / 5.5f, pi / 5.5f, pi, 1.0f); //roll, pitch, yaw - in radians/sec
@@ -125,6 +126,7 @@ public:
     VehicleStateType default_vehicle_state = VehicleStateType::Inactive;
     uint64_t api_goal_timeout = 60; //milliseconds
     ControllerType controller_type = ControllerType::Cascade;
+    //Cascade
     bool gains_changed;
 };
 

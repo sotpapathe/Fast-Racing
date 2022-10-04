@@ -430,9 +430,10 @@ public: //methods
     {
         auto it = vehicles.find(vehicle_name);
         if (it == vehicles.end())
-            // pre-existing flying pawns in Unreal Engine don't have name 'SimpleFlight'
-            it = vehicles.find("SimpleFlight");
-        return it->second.get();
+            throw std::invalid_argument(Utils::stringf("VehicleSetting for vehicle name %s was requested but not found",
+                vehicle_name.c_str()).c_str());
+        else
+            return it->second.get();
     }
 
 private:

@@ -232,6 +232,7 @@ protected:
 
         std::string message;
         firmware_->offboardApi().setGoalAndMode(&goal, &mode, message);
+        
     }
 
     virtual void commandRollPitchYawrateThrottle(float roll, float pitch, float yaw_rate, float throttle) override

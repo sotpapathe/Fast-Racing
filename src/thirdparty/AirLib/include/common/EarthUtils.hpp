@@ -167,7 +167,8 @@ public:
     static real_T getAirDensity(real_T std_pressure, real_T std_temperature)  //kg / m^3
     {
         //http://www.braeunig.us/space/atmmodel.htm
-        return std_pressure / 287.053f / std_temperature;
+        // return std_pressure / 287.053f / std_temperature;
+        // return 0.00001;
     }
 
     static real_T getAirDensity(real_T altitude)  //kg / m^3
