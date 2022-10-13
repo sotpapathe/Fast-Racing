@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cmath>
 #include <memory>
+#include <utility>
 #include <octomap_server/OctomapServer.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -131,6 +132,8 @@ int main(int argc, char **argv) {
 		+ Eigen::Vector3f(resolution, resolution, -0.7f);
 	Eigen::Vector3f mav_position = airsim_client_map_.simGetObjectPose(mav_name).position;
 	if (world_frameid == "world_enu") {
+		// Hacky conversion from NED to ENU.
+		std::swap(mav_position.x(), mav_position.y());
 		mav_position.z() *= -1.0f;
 	}
 
