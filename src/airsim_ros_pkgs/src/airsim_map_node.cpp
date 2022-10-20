@@ -142,7 +142,7 @@ int main(int argc, char **argv) {
 	constexpr int grid_dim = 20;
 	// Test if the AirSim number of voxels truncation bug is triggered.
 	const float num_voxels = grid_dim / resolution;
-	if (num_voxels != floor(num_voxels)) {
+	if (std::fabs(num_voxels - std::floor(num_voxels)) < 0.00001f) {
 		ROS_WARN("The resolution (%f) doesn't evenly divide the grid dimensions (%d), the voxel grid will be unreliable",
 			resolution, grid_dim);
 	}
