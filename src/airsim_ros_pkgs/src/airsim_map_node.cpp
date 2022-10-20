@@ -120,12 +120,16 @@ int main(int argc, char **argv) {
 
 	std::string host_ip;
 	double resolution;
+	int grid_dim;
 	std::string world_frameid;
 	bool use_octree;
 	nh.param("host_ip", host_ip, std::string("localhost"));
 	nh.param("resolution", resolution, 0.1);
+	nh.param("grid_dim", grid_dim, 20);
 	nh.param("world_frame_id", world_frameid, std::string("world_enu"));
 	nh.param("use_octree", use_octree, false);
+
+	airsim_bug_1_warning(grid_dim, resolution);
 
 	std::unique_ptr<octomap_server::OctomapServer> server_drone;
 	if (use_octree) {
@@ -153,8 +157,6 @@ int main(int argc, char **argv) {
 
 	// Save and then load the voxel map.
 	msr::airlib::Vector3r origin (0, 0, 0);
-	constexpr int grid_dim = 20;
-	airsim_bug_1_warning(grid_dim, resolution);
 	const std::string filename = "/tmp/airsim_map.binvox";
 	if (!airsim_client_map_.simCreateVoxelGrid(origin, grid_dim, grid_dim, grid_dim, resolution, filename)) {
 		ROS_FATAL("Error writing binvox file %s", filename.c_str());
