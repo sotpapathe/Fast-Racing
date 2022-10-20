@@ -139,7 +139,7 @@ int main(int argc, char **argv) {
 
 	// Save and then load the voxel map.
 	msr::airlib::Vector3r origin (0, 0, 0);
-	constexpr double grid_dim = 20.0;
+	constexpr int grid_dim = 20;
 	const std::string filename = "/tmp/airsim_map.binvox";
 	if (!airsim_client_map_.simCreateVoxelGrid(origin, grid_dim, grid_dim, grid_dim, resolution, filename)) {
 		ROS_FATAL("Error writing binvox file %s", filename.c_str());
