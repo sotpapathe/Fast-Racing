@@ -99,6 +99,20 @@ struct VoxelGrid {
 
 
 
+// Warn if the AirSim number of voxels truncation bug is triggered.
+void airsim_bug_1_warning(int grid_dim, float grid_res)
+{
+	const float num_voxels_actual = grid_dim / grid_res;
+	const int num_voxels_airsim = grid_dim / grid_res;
+	const fload diff = num_voxels_actual - num_voxels_airsim;
+	if (diff < 0.0f || diff > 0.00001f) {
+		ROS_WARN("The resolution (%f) doesn't evenly divide the grid dimensions (%d), the voxel grid will be unreliable",
+			grid_res, grid_dim);
+	}
+}
+
+
+
 int main(int argc, char **argv) {
 	ros::init(argc, argv, "map_node");
 	ros::NodeHandle nh("~");
@@ -140,12 +154,7 @@ int main(int argc, char **argv) {
 	// Save and then load the voxel map.
 	msr::airlib::Vector3r origin (0, 0, 0);
 	constexpr int grid_dim = 20;
-	// Test if the AirSim number of voxels truncation bug is triggered.
-	const float num_voxels = grid_dim / resolution;
-	if (std::fabs(num_voxels - std::floor(num_voxels)) < 0.00001f) {
-		ROS_WARN("The resolution (%f) doesn't evenly divide the grid dimensions (%d), the voxel grid will be unreliable",
-			resolution, grid_dim);
-	}
+	airsim_bug_1_warning(grid_dim, resolution);
 	const std::string filename = "/tmp/airsim_map.binvox";
 	if (!airsim_client_map_.simCreateVoxelGrid(origin, grid_dim, grid_dim, grid_dim, resolution, filename)) {
 		ROS_FATAL("Error writing binvox file %s", filename.c_str());
