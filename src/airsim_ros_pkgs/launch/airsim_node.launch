@@ -22,6 +22,9 @@
 		<param name="world_frame_id" type="string" value="$(arg frame)" />
 		<param name="resolution" type="double" value="0.1" />
 		<param name="grid_dim" type="int" value="20" />
+		<param name="grid_origin_x" type="double" value="0.0" />
+		<param name="grid_origin_y" type="double" value="0.0" />
+		<param name="grid_origin_z" type="double" value="0.0" />
 		<param name="use_octree" type="bool" value="$(arg use_octree)" />
 	</node>
 

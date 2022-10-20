@@ -121,13 +121,24 @@ int main(int argc, char **argv) {
 	std::string host_ip;
 	double resolution;
 	int grid_dim;
+	double grid_origin_x;
+	double grid_origin_y;
+	double grid_origin_z;
 	std::string world_frameid;
 	bool use_octree;
 	nh.param("host_ip", host_ip, std::string("localhost"));
 	nh.param("resolution", resolution, 0.1);
 	nh.param("grid_dim", grid_dim, 20);
+	nh.param("grid_origin_x", grid_origin_x, 0.0);
+	nh.param("grid_origin_y", grid_origin_y, 0.0);
+	nh.param("grid_origin_z", grid_origin_z, 0.0);
 	nh.param("world_frame_id", world_frameid, std::string("world_enu"));
 	nh.param("use_octree", use_octree, false);
+	// The origin of the grid expressed in the NED frame. The x/y swap
+	// performed internally in AirSim when saving the voxel grid is
+	// probably cancelled out because the pipelien uses the ENU frame. The
+	// z coordinate doesn't get negated though which is weird.
+	const msr::airlib::Vector3r grid_origin (grid_origin_x, grid_origin_y, grid_origin_z);
 
 	airsim_bug_1_warning(grid_dim, resolution);
 
@@ -156,9 +167,8 @@ int main(int argc, char **argv) {
 	}
 
 	// Save and then load the voxel map.
-	msr::airlib::Vector3r origin (0, 0, 0);
 	const std::string filename = "/tmp/airsim_map.binvox";
-	if (!airsim_client_map_.simCreateVoxelGrid(origin, grid_dim, grid_dim, grid_dim, resolution, filename)) {
+	if (!airsim_client_map_.simCreateVoxelGrid(grid_origin, grid_dim, grid_dim, grid_dim, resolution, filename)) {
 		ROS_FATAL("Error writing binvox file %s", filename.c_str());
 	}
 	const VoxelGrid grid (filename);
