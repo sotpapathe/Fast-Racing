@@ -104,7 +104,7 @@ void airsim_bug_1_warning(int grid_dim, float grid_res)
 {
 	const float num_voxels_actual = grid_dim / grid_res;
 	const int num_voxels_airsim = grid_dim / grid_res;
-	const fload diff = num_voxels_actual - num_voxels_airsim;
+	const float diff = num_voxels_actual - num_voxels_airsim;
 	if (diff < 0.0f || diff > 0.00001f) {
 		ROS_WARN("The resolution (%f) doesn't evenly divide the grid dimensions (%d), the voxel grid will be unreliable",
 			grid_res, grid_dim);
