@@ -140,6 +140,12 @@ int main(int argc, char **argv) {
 	// Save and then load the voxel map.
 	msr::airlib::Vector3r origin (0, 0, 0);
 	constexpr int grid_dim = 20;
+	// Test if the AirSim number of voxels truncation bug is triggered.
+	const float num_voxels = grid_dim / resolution;
+	if (num_voxels != floor(num_voxels)) {
+		ROS_WARN("The resolution (%f) doesn't evenly divide the grid dimensions (%d), the voxel grid will be unreliable",
+			resolution, grid_dim);
+	}
 	const std::string filename = "/tmp/airsim_map.binvox";
 	if (!airsim_client_map_.simCreateVoxelGrid(origin, grid_dim, grid_dim, grid_dim, resolution, filename)) {
 		ROS_FATAL("Error writing binvox file %s", filename.c_str());
