@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
 	std::string world_frameid;
 	bool use_octree;
 	nh.param("host_ip", host_ip, std::string("localhost"));
-	nh.param("resolution", resolution, 0.08);
+	nh.param("resolution", resolution, 0.1);
 	nh.param("world_frame_id", world_frameid, std::string("world_enu"));
 	nh.param("use_octree", use_octree, false);
 

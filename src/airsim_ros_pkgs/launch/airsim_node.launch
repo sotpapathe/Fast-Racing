@@ -20,7 +20,7 @@
 	<node name="airsim_map_node" pkg="airsim_ros_pkgs" type="airsim_map_node" output="screen" required="true">
 		<param name="host_ip" type="string" value="$(arg host)" />
 		<param name="world_frame_id" type="string" value="$(arg frame)" />
-		<param name="resolution" type="double" value="0.08" />
+		<param name="resolution" type="double" value="0.1" />
 		<param name="use_octree" type="bool" value="$(arg use_octree)" />
 	</node>
 
